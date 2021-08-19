@@ -43,7 +43,7 @@ type MaskTextFieldProps = Exclude<StandardTextFieldProps, 'variant'>
 
 export const MaskTextField = forwardRef((props: MaskTextFieldProps, ref: ForwardedRef<any>) => {
     const { label, sx, ...rest } = props
-    const inputProps = (props.inputProps as InputProps) ?? {}
+    const inputProps = (props.InputProps as InputProps) ?? {}
     const { classes } = useStyles()
     return (
         <Box sx={sx}>
