@@ -1,7 +1,7 @@
-import type { RedPacketRecord } from '../types'
-import * as database from './database'
 import type { ChainId } from '@masknet/web3-shared'
+import type { RedPacketRecord } from '../types'
 import * as subgraph from './apis'
+import * as database from './database'
 
 export async function discoverRedPacket(record: RedPacketRecord) {
     if (record.contract_version === 1) {
@@ -26,4 +26,9 @@ export async function getRedPacketHistoryWithPassword(address: string, chainId: 
         historiesWithPassword.push(history)
     }
     return historiesWithPassword
+}
+
+export async function getNftRedPacketHistory(address: string, chainId: ChainId) {
+    const histories = await subgraph.getNftRedPacketHistory(address, chainId)
+    return histories
 }

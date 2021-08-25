@@ -8,7 +8,7 @@ import { RedPacketJSONPayload, DialogTabs, RedPacketRecord } from '../types'
 import { RedPacketRPC } from '../messages'
 import { RedPacketMetaKey } from '../constants'
 import { RedPacketCreateNew } from './RedPacketCreateNew'
-import { RedPacketHistoryList } from './RedPacketHistoryList'
+import { RedPacketPast } from './RedPacketPast'
 import { InjectedDialog } from '../../../components/shared/InjectedDialog'
 import Services from '../../../extension/service'
 import Web3Utils from 'web3-utils'
@@ -233,7 +233,7 @@ export default function RedPacketDialog(props: RedPacketDialogProps) {
             },
             {
                 label: t('plugin_red_packet_select_existing'),
-                children: <RedPacketHistoryList onSelect={onCreateOrSelect} onClose={onClose} />,
+                children: <RedPacketPast />,
                 sx: { p: 0 },
             },
         ],

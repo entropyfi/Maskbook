@@ -51,6 +51,8 @@ export function useCreateNftRedpacketCallback(
                     error: new Error('Require to send one nft token at least'),
                 })
                 return
+            } else {
+                debugger
             }
 
             setCreateState({

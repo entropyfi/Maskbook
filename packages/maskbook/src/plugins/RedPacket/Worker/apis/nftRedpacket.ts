@@ -1,19 +1,12 @@
-import {
-    ChainId,
-    EthereumTokenType,
-    getChainDetailed,
-    getChainName,
-    getRedPacketConstants,
-    NativeTokenDetailed,
-} from '@masknet/web3-shared'
+import { ChainId, getChainName, getNftRedPacketConstants } from '@masknet/web3-shared'
 import stringify from 'json-stable-stringify'
 import { first, pick } from 'lodash-es'
 import { tokenIntoMask } from '../../../ITO/SNSAdaptor/helpers'
 import { currentChainIdSettings } from '../../../Wallet/settings'
 import type {
-    RedPacketHistory,
+    NftRedPacketHistory,
+    NftRedPacketSubgraphInMask,
     RedPacketJSONPayload,
-    RedPacketSubgraphInMask,
     RedPacketSubgraphOutMask,
 } from '../../types'
 
@@ -24,7 +17,6 @@ const redPacketBasicKeys = [
     'txid',
     'password',
     'shares',
-    'is_random',
     'total',
     'creation_time',
     'duration',
@@ -35,7 +27,6 @@ const TOKEN_FIELDS = `
     address
     name
     symbol
-    decimals
     chain_id
 `
 
@@ -53,9 +44,7 @@ const RED_PACKET_FIELDS = `
     shares
     message
     name
-    is_random
     total
-    total_remaining
     creation_time
     last_updated_time
     duration
@@ -63,6 +52,7 @@ const RED_PACKET_FIELDS = `
     token {
         ${TOKEN_FIELDS}
     }
+    token_ids
     creator {
         ${USER_FIELDS}
     }
@@ -71,8 +61,8 @@ const RED_PACKET_FIELDS = `
     }
 `
 
-async function fetchFromRedPacketSubgraph<T>(query: string) {
-    const subgraphURL = getRedPacketConstants(currentChainIdSettings.value).SUBGRAPH_URL
+async function fetchFromNFTRedPacketSubgraph<T>(query: string) {
+    const subgraphURL = getNftRedPacketConstants(currentChainIdSettings.value).SUBGRAPH_URL
     if (!subgraphURL) return null
     const response = await fetch(subgraphURL, {
         method: 'POST',
@@ -85,10 +75,10 @@ async function fetchFromRedPacketSubgraph<T>(query: string) {
     return data
 }
 
-export async function getRedPacketTxid(rpid: string) {
-    const data = await fetchFromRedPacketSubgraph<{ redPackets: RedPacketSubgraphOutMask[] }>(`
+export async function getNftRedPacketTxid(rpid: string) {
+    const data = await fetchFromNFTRedPacketSubgraph<{ redPackets: RedPacketSubgraphOutMask[] }>(`
     {
-        redPackets (where: { rpid: "${rpid.toLowerCase()}" }) {
+        nftredPackets (where: { rpid: "${rpid.toLowerCase()}" }) {
             ${RED_PACKET_FIELDS}
         }
     }
@@ -96,36 +86,30 @@ export async function getRedPacketTxid(rpid: string) {
     return first(data?.redPackets)?.txid
 }
 
-export async function getRedPacketHistory(address: string, chainId: ChainId) {
-    const data = await fetchFromRedPacketSubgraph<{ redPackets: RedPacketSubgraphOutMask[] }>(`
+export async function getNftRedPacketHistory(address: string, chainId: ChainId) {
+    const data = await fetchFromNFTRedPacketSubgraph<{ nftredPackets: RedPacketSubgraphOutMask[] }>(`
     {
-        redPackets (where: { creator: "${address.toLowerCase()}" }) {
+        nftredPackets (where: { creator: "${address.toLowerCase()}" }) {
             ${RED_PACKET_FIELDS}
         }
     }
     `)
-
-    if (!data?.redPackets) return []
-    return data.redPackets
+    if (!data?.nftredPackets) return []
+    return data.nftredPackets
         .map((x) => {
-            const redPacketSubgraphInMask = { ...x, token: tokenIntoMask(x.token) } as RedPacketSubgraphInMask
+            const redPacketSubgraphInMask = {
+                ...x,
+                token: tokenIntoMask(x.token),
+                duration: x.duration * 1000,
+                creation_time: x.creation_time * 1000,
+                last_updated_time: x.last_updated_time * 1000,
+            } as NftRedPacketSubgraphInMask
             const redPacketBasic = pick(redPacketSubgraphInMask, redPacketBasicKeys)
-            redPacketBasic.creation_time = redPacketSubgraphInMask.creation_time * 1000
+            const network = getChainName(redPacketSubgraphInMask.chain_id)
             const sender = {
                 address: redPacketSubgraphInMask.creator.address,
                 name: redPacketSubgraphInMask.creator.name,
                 message: redPacketSubgraphInMask.message,
-            }
-            const network = getChainName(redPacketSubgraphInMask.chain_id)
-
-            if (redPacketSubgraphInMask.token.type === EthereumTokenType.Native) {
-                const detailed = getChainDetailed(redPacketSubgraphInMask.token.chainId)
-                const token = {
-                    ...redPacketSubgraphInMask.token,
-                    name: detailed?.nativeCurrency.name ?? 'Ether',
-                    symbol: detailed?.nativeCurrency.symbol ?? 'ETH',
-                } as NativeTokenDetailed
-                redPacketSubgraphInMask.token = token
             }
             const payload = {
                 sender,
@@ -134,13 +118,10 @@ export async function getRedPacketHistory(address: string, chainId: ChainId) {
                 token: pick(redPacketSubgraphInMask.token, ['symbol', 'address', 'name', 'decimals']),
                 ...redPacketBasic,
             } as RedPacketJSONPayload
-
             return {
                 payload,
                 ...redPacketSubgraphInMask,
-            } as RedPacketHistory
+            } as NftRedPacketHistory
         })
-        .sort((a, b) => b.creation_time - a.creation_time)
+        .sort((r1, r2) => r1.creation_time - r2.creation_time)
 }
-
-export * from './nftRedpacket'

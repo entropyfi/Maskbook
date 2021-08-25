@@ -1,20 +1,19 @@
-import { useCallback, useEffect } from 'react'
-import BigNumber from 'bignumber.js'
-import classNames from 'classnames'
-import { Box, ListItem, Typography } from '@material-ui/core'
-import { makeStyles } from '@masknet/theme'
-import { Trans } from 'react-i18next'
-import { RedPacketHistory, RedPacketJSONPayload, RedPacketStatus } from '../types'
-import { useRemoteControlledDialog } from '@masknet/shared'
-import { useI18N } from '../../../utils/i18n-next-ui'
-import { formatBalance, TransactionStateType, useAccount } from '@masknet/web3-shared'
 import { TokenIcon } from '@masknet/shared'
-import { dateTimeFormat } from '../../ITO/assets/formatDate'
+import { makeStyles } from '@masknet/theme'
+import { TransactionStateType, useAccount } from '@masknet/web3-shared'
+import { Box, ListItem, Typography } from '@material-ui/core'
+import { fill } from 'lodash-es'
+import classNames from 'classnames'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { Trans } from 'react-i18next'
 import ActionButton from '../../../extension/options-page/DashboardComponents/ActionButton'
-import { StyledLinearProgress } from '../../ITO/SNSAdaptor/StyledLinearProgress'
+import { useI18N } from '../../../utils/i18n-next-ui'
+import { dateTimeFormat } from '../../ITO/assets/formatDate'
+import { NftRedPacketHistory, RedPacketJSONPayload, RedPacketStatus } from '../types'
 import { useAvailabilityComputed } from './hooks/useAvailabilityComputed'
+import { useAvailabilityNftRedPacket } from './hooks/useAvailabilityNftRedPacket'
 import { useRefundCallback } from './hooks/useRefundCallback'
-import { WalletMessages } from '../../Wallet/messages'
+import { NftList } from './NftList'
 
 const useStyles = makeStyles()((theme) => ({
     primary: {
@@ -100,61 +99,44 @@ const useStyles = makeStyles()((theme) => ({
     },
 }))
 
-export interface RedPacketInHistoryListProps {
-    history: RedPacketHistory
+export interface NftRedPacketHistoryItemProps {
+    history: NftRedPacketHistory
     onSelect: (payload: RedPacketJSONPayload) => void
 }
-export function RedPacketInHistoryList(props: RedPacketInHistoryListProps) {
+export const NftRedPacketHistoryItem = memo<NftRedPacketHistoryItemProps>((props: NftRedPacketHistoryItemProps) => {
     const account = useAccount()
     const { history, onSelect } = props
     const { t } = useI18N()
     const { classes } = useStyles()
     const {
-        value: availability,
         computed: { canRefund, canSend, listOfStatus },
-        retry: revalidateAvailability,
     } = useAvailabilityComputed(account, history.payload)
+    const contractDetailed = useMemo(() => {
+        // @ts-ignore
+        return { ...history.token.contractDetailed, address: history.token.address }
+        // @ts-ignore
+    }, [history.token.contractDetailed, history.token.address])
 
-    const [refundState, refundCallback, resetRefundCallback] = useRefundCallback(
-        history.payload.contract_version,
-        account,
-        history.rpid,
-    )
-
-    //#region remote controlled transaction dialog
-    const { setDialog: setTransactionDialog } = useRemoteControlledDialog(
-        WalletMessages.events.transactionDialogUpdated,
-    )
-
-    useEffect(() => {
-        if (refundState.type === TransactionStateType.UNKNOWN || !availability) return
-        if (refundState.type === TransactionStateType.HASH) {
-            setTransactionDialog({
-                open: true,
-                state: refundState,
-                summary: availability
-                    ? `Refunding red packet for ${formatBalance(
-                          new BigNumber(availability.balance),
-                          history.token.decimals ?? 0,
-                          history.token.decimals ?? 0,
-                      )} ${history.token.symbol}`
-                    : '',
-            })
-        } else if (refundState.type === TransactionStateType.CONFIRMED) {
-            resetRefundCallback()
-            revalidateAvailability()
-        }
-    }, [refundState /* update tx dialog only if state changed */])
-    //#endregion
+    const [refundState, refundCallback, resetRefundCallback] = useRefundCallback(1, account, history.rpid)
 
     const onSendOrRefund = useCallback(async () => {
         if (canRefund) await refundCallback()
         if (canSend) onSelect(history.payload)
     }, [onSelect, refundCallback, canRefund, canSend, history])
+    const { value: redpacketStatus, error } = useAvailabilityNftRedPacket(history.rpid, account)
+    const statusList = redpacketStatus
+        ? redpacketStatus.bit_status
+              .split('')
+              .reverse()
+              .map((bit) => bit === '1')
+        : fill(Array(history.token_ids.length), false)
+
+    console.log('statusList', statusList, error)
 
     return (
         <ListItem className={classes.root}>
             <Box className={classes.box}>
+                {/* @ts-ignore */}
                 <TokenIcon
                     classes={{ icon: classes.icon }}
                     address={history.token.address}
@@ -169,24 +151,8 @@ export function RedPacketInHistoryList(props: RedPacketInHistoryListProps) {
                             </Typography>
                             <Typography variant="body1" className={classNames(classes.info, classes.message)}>
                                 {t('plugin_red_packet_history_duration', {
-                                    startTime: dateTimeFormat(new Date(history.creation_time * 1000)),
-                                    endTime: dateTimeFormat(
-                                        new Date((history.creation_time + history.duration) * 1000),
-                                        false,
-                                    ),
-                                })}
-                            </Typography>
-                            <Typography variant="body1" className={classNames(classes.info, classes.message)}>
-                                {t('plugin_red_packet_history_total_amount', {
-                                    amount: formatBalance(history.total, history.token.decimals, 6),
-                                    symbol: history.token.symbol,
-                                })}
-                            </Typography>
-                            <Typography variant="body1" className={classNames(classes.info, classes.message)}>
-                                {t('plugin_red_packet_history_split_mode', {
-                                    mode: history.is_random
-                                        ? t('plugin_red_packet_random')
-                                        : t('plugin_red_packet_average'),
+                                    startTime: dateTimeFormat(new Date(history.creation_time)),
+                                    endTime: dateTimeFormat(new Date(history.creation_time + history.duration), false),
                                 })}
                             </Typography>
                         </div>
@@ -213,12 +179,9 @@ export function RedPacketInHistoryList(props: RedPacketInHistoryListProps) {
                             </ActionButton>
                         ) : null}
                     </section>
-                    <StyledLinearProgress
-                        barColor="rgba(44, 164, 239)"
-                        backgroundColor="rgba(44, 164, 239, 0.2)"
-                        variant="determinate"
-                        value={100 * (1 - Number(history.total_remaining) / Number(history.total))}
-                    />
+                    <section>
+                        <NftList contract={contractDetailed} statusList={statusList} tokenIds={history.token_ids} />
+                    </section>
                     <section className={classes.footer}>
                         <Typography variant="body1" className={classes.footerInfo}>
                             <Trans
@@ -232,27 +195,9 @@ export function RedPacketInHistoryList(props: RedPacketInHistoryListProps) {
                                 }}
                             />
                         </Typography>
-                        <Typography variant="body1" className={classes.footerInfo}>
-                            <Trans
-                                i18nKey="plugin_red_packet_history_total_claimed_amount"
-                                components={{
-                                    strong: <strong className={classes.strong} />,
-                                    span: <span className={classes.span} />,
-                                }}
-                                values={{
-                                    amount: formatBalance(history.total, history.token.decimals, 6),
-                                    claimedAmount: formatBalance(
-                                        new BigNumber(history.total).minus(history.total_remaining),
-                                        history.token.decimals,
-                                        6,
-                                    ),
-                                    symbol: history.token.symbol,
-                                }}
-                            />
-                        </Typography>
                     </section>
                 </Box>
             </Box>
         </ListItem>
     )
-}
+})
