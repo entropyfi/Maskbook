@@ -11,7 +11,7 @@ interface TokenRecord {
     [token: string]: PriceRecord
 }
 
-async function fetchTokenPrice(token = 'ethereum', currency = 'usd') {
+export async function fetchTokenPrice(token = 'ethereum', currency = 'usd') {
     const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${token}&vs_currencies=${currency}`)
     const data = (await response.json()) as TokenRecord | null
     if (!data) return 0
