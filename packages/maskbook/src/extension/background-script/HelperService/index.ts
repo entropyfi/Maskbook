@@ -1,7 +1,11 @@
-import { memoizePromise } from '../../utils/memoize'
-import { constructRequestPermissionURL } from '../popups'
+import { memoizePromise } from '../../../utils'
+import { getNetworkWorker } from '../../../social-network'
+import { constructRequestPermissionURL, PopupRoutes } from '../../popups'
+
+export * from './storage'
 
 const cache = new Map<string, string>()
+
 export const resolveTCOLink = memoizePromise(
     async (u: string) => {
         if (!u.startsWith('https://t.co/')) return null
@@ -67,4 +71,27 @@ export async function requestBrowserPermission(permission: browser.permissions.P
 
 export function queryPermission(permission: browser.permissions.Permissions) {
     return browser.permissions.contains(permission)
+}
+
+export async function createNewWindowAndPasteShareContent(SNSIdentifier: string, post: string) {
+    const url = (await getNetworkWorker(SNSIdentifier)).utils.getShareLinkURL?.(post)
+    if (!url) return
+    browser.tabs.create({ active: true, url: url.toString() })
+}
+
+export function openPopupsWindow(route?: string) {
+    if (!!navigator.userAgent.match(/Chrome/)) {
+        window.open(
+            browser.runtime.getURL(`popups.html#${route ?? PopupRoutes.Wallet}`),
+            '',
+            'resizable,scrollbars,status,width=310,height=540',
+        )
+    } else {
+        browser.windows.create({
+            url: browser.runtime.getURL(`popups.html#${route ?? PopupRoutes.Wallet}`),
+            width: 310,
+            height: 540,
+            type: 'popup',
+        })
+    }
 }

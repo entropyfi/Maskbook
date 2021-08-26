@@ -24,8 +24,9 @@ import {
 } from '../../../plugins/Wallet/settings'
 import { debugModeSetting } from '../../../settings/settings'
 import { Flags } from '../../../utils'
+import { hasNativeAPI, nativeAPI } from '../../../utils/native-rpc'
 import { WalletRPC } from '../../../plugins/Wallet/messages'
-import { PopupRoutes } from '../../popups'
+import { openPopupsWindow } from '../HelperService'
 
 export interface SendOverrides {
     chainId?: ChainId
@@ -72,6 +73,24 @@ export async function INTERNAL_send(
         console.debug(new Error().stack)
     }
 
+    // for a native app, we leverage RPC flows to the native app
+    if (hasNativeAPI && nativeAPI) {
+        try {
+            const response = await nativeAPI.api.send(payload)
+            callback(null, response)
+            if (payload.method === EthereumMethodType.ETH_SEND_TRANSACTION) {
+                handleNonce(account, null, response)
+                handleRecentTransaction(account, response)
+            }
+        } catch (error) {
+            if (error instanceof Error) {
+                callback(error, undefined)
+                handleNonce(account, error, undefined)
+            }
+        }
+        return
+    }
+
     // some rpc methods need to be confirmed by the user
     if (
         Flags.v2_enabled &&
@@ -86,11 +105,7 @@ export async function INTERNAL_send(
             return
         }
 
-        window.open(
-            browser.runtime.getURL(`popups.html${PopupRoutes.Wallet}`),
-            '',
-            'resizable,scrollbars,status,width=310,height=540',
-        )
+        openPopupsWindow()
     }
 
     const wallet = providerType === ProviderType.Maskbook ? await getWallet() : null
