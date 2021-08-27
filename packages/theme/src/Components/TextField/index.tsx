@@ -36,6 +36,7 @@ const useStyles = makeStyles()((theme) => ({
             theme.palette.mode === 'dark' ? getMaskColor(theme).lightBackground : getMaskColor(theme).normalBackground,
         fontSize: 12,
         lineHeight: '16px',
+        borderRadius: 6,
     },
 }))
 
