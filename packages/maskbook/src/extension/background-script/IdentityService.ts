@@ -47,6 +47,7 @@ import { getCurrentPersonaIdentifier } from './SettingsService'
 import { recover_ECDH_256k1_KeyPair_ByMnemonicWord_V2 } from '../../utils/mnemonic-code'
 import { MaskMessage } from '../../utils'
 import { split_ec_k256_keypair_into_pub_priv } from '../../modules/CryptoAlgorithm/helper'
+import { orderBy } from 'lodash-es'
 
 assertEnvironment(Environment.ManifestBackground)
 
@@ -117,6 +118,7 @@ export async function queryPersonas(identifier?: PersonaIdentifier, requirePriva
     if (!x || (!x.privateKey && requirePrivateKey)) return []
     return [personaRecordToPersona(x)]
 }
+
 export function queryMyPersonas(network?: string): Promise<Persona[]> {
     return queryPersonas(undefined, true).then((x) =>
         typeof network === 'string'
@@ -129,6 +131,12 @@ export function queryMyPersonas(network?: string): Promise<Persona[]> {
             : x,
     )
 }
+
+export async function queryLastPersonaCreated() {
+    const all = await queryPersonas(undefined, true)
+    return orderBy(all, (x) => x.createdAt, 'desc')[0]
+}
+
 export async function backupPersonaPrivateKey(
     identifier: PersonaIdentifier,
 ): Promise<EC_Private_JsonWebKey | undefined> {
