@@ -163,7 +163,7 @@ export function resolveUniswapWarningLevel(priceImpact: BigNumber) {
     if (priceImpact_.isGreaterThan(PRICE_IMPACT_HIGH)) return WarningLevel.HIGH
     if (priceImpact_.isGreaterThan(PRICE_IMPACT_MEDIUM)) return WarningLevel.MEDIUM
     if (priceImpact_.isGreaterThan(PRICE_IMPACT_LOW)) return WarningLevel.LOW
-    return
+    return WarningLevel.LOW
 }
 
 export const resolveUniswapWarningLevelColor = createLookupTableResolver<WarningLevel, string>(
