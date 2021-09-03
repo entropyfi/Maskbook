@@ -29,7 +29,7 @@ export const resolveDataProviderName = createLookupTableResolver<DataProvider, s
         [DataProvider.UNISWAP_INFO]: 'Uniswap Info',
     },
     (dataProvider) => {
-        throw new Error(`Unkown data provider: ${dataProvider}`)
+        throw new Error(`Unknown data provider: ${dataProvider}`)
     },
 )
 
@@ -40,7 +40,7 @@ export const resolveDataProviderLink = createLookupTableResolver<DataProvider, s
         [DataProvider.UNISWAP_INFO]: 'https://info.uniswap.org/',
     },
     (dataProvider) => {
-        throw new Error(`Unkown data provider: ${dataProvider}`)
+        throw new Error(`Unknown data provider: ${dataProvider}`)
     },
 )
 
@@ -57,7 +57,7 @@ export const resolveTradeProviderName = createLookupTableResolver<TradeProvider,
         [TradeProvider.DODO]: 'DODO',
     },
     (tradeProvider) => {
-        throw new Error(`Unkown provider type: ${tradeProvider}`)
+        throw new Error(`Unknown provider type: ${tradeProvider}`)
     },
 )
 
@@ -233,5 +233,5 @@ export const resolveZrxTradePoolName = createLookupTableResolver<ZrxTradePool, s
         [ZrxTradePool.WaultSwap]: 'WaultSwap',
         [ZrxTradePool.xSigma]: 'xSigma',
     },
-    'Unkown',
+    'Unknown',
 )
