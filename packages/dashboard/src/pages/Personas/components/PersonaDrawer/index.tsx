@@ -7,6 +7,8 @@ import { MaskColorVar } from '@masknet/theme'
 import { AddPersonaCard } from '../AddPersonaCard'
 import { useDashboardI18N } from '../../../../locales'
 import type { PersonaIdentifier, PersonaInformation } from '@masknet/shared'
+import { useNavigate } from 'react-router'
+import { RoutePaths } from '../../../../type'
 
 const useStyles = makeStyles()((theme) => ({
     root: {
@@ -72,6 +74,7 @@ export const PersonaDrawerUI = memo<PersonaDrawerUIProps>(
     ({ open, currentPersonaIdentifier, toggleDrawer, personas, onChangeCurrentPersona, onCreatePersona }) => {
         const { classes } = useStyles()
         const t = useDashboardI18N()
+        const navigate = useNavigate()
 
         const [showAddPersonaCard, setShowAddPersonaCard] = useState(false)
 
@@ -111,8 +114,10 @@ export const PersonaDrawerUI = memo<PersonaDrawerUIProps>(
                     />
                 )}
                 <Box className={classes.buttons}>
-                    <Button onClick={() => setShowAddPersonaCard(true)}>{t.personas_add_persona()}</Button>
-                    <Button color="warning">{t.personas_back_up()}</Button>
+                    <Button onClick={() => navigate(RoutePaths.SignUp)}>{t.personas_add_persona()}</Button>
+                    <Button color="warning" onClick={() => navigate(RoutePaths.Settings)}>
+                        {t.personas_back_up()}
+                    </Button>
                 </Box>
             </Drawer>
         )
